@@ -1,0 +1,585 @@
+微软VBA参考官网
+https://docs.microsoft.com/zh-cn/office/vba/api/overview/
+快捷键打开vba  alt+F11
+在立即窗口输出变量的值：  debug.print b
+
+call之前，call的sub或function一定得先有，否则会报变量未定义的错误，无法规避
+
+select是选取的意思，那么Selection的意思就是正在被选取的。被选取的不仅是单元格，也可以是图表，图表等。
+
+Object.color=RGB(255,255,0)、QBColor(4)、vbGreen、颜色参数使用十六进制(&H)：&H48554799
+
+错误跳过，继续执行下一句
+On Error Resume Next
+
+停止/开启事件（change事件一定加上）Application.EnableEvents=false/true(一般成对出现)
+
+Debug.Print Dir(ThisWorkbook.Path & "\笔记.txt")  返回文件的名字不带路径，即输出为笔记.txt，判断不了文件夹是否存在，正确如下：
+Set objFso = CreateObject("Scripting.FileSystemObject")
+If objFso.FolderExists(ThisWorkbook.Path & "\备份") = False Then
+   objFso.CreateFolder (ThisWorkbook.Path & "\备份")
+End If
+ActiveWorkbook.SaveCopyAs ThisWorkbook.Path & "\备份\" & Format(Now(), "yyyymmddhhmm") & ".xlsm"
+
+Cstr()
+意思将括号内的数据转换为文本型,也就是string类型
+
+integer范围-32768至32767
+将数字字符串或数值转换为integer型（小心溢出）：CInt(arg)
+
+看是否为数字vba.information.isNumeric(x)=false/true
+Val 函数：
+https://docs.microsoft.com/zh-cn/office/vba/language/reference/user-interface-help/val-function
+val("12ab56c8")返回12568
+
+ActiveSheet.UsedRange.Rows.Count  
+ActiveSheet.UsedRange.Columns.Count 
+缺点：有时可能会比实际数大一些，原因是如果你把最后几行（列）数据清除后（非整行或整列删除），
+用这个命令仍返回未清除前的值。就是说现在虽然是空的，但是你曾经用过也算你的。
+
+Collection数据类型
+https://docs.microsoft.com/zh-cn/office/vba/language/reference/user-interface-help/collection-object
+Collection.add(item,[key])   item可以为任意数据类型（包括空），key只能是字符串
+Collection对象添加成员（项）自动去重需加上key，key可用于替代位置索引访问集合的成员的唯一字符串表达式，因为key要唯一的，所以就自动去重了，但key遇上重复的会报错，所以需写跳过错误语句
+
+
+第二课
+if...then...elseif...then...else...endif
+and/or(&&/||)
+Range("A"& i)
+step -1
+exitfor
+
+
+
+第三课
+workSheets/sheets
+sheets(1)/sheets("4月")/sheet1
+sheets(1).select 
+添加表 sheets.add after:=sheets(sheets.count),count:=5
+显示警告 application.displayAlerts=false/true
+删除表 sheets(2).delete
+复制表 sheet1.copy after:=sheets(sheets.count)
+取表名或者命名表名sheets(1).name
+
+
+
+第四课
+删表：
+sub test()
+  dim biao as Worksheet
+  Application.DisplayAlerts=False
+  for each biao In Sheets
+    If biao.Name <> "sheet3" Then
+       biao.Delete
+    End If
+  Next
+  Application.DisplayAlerts=True
+end sub
+
+屏幕更新(成对出现) application.ScreenUpdating=False/True
+打开文件 Workbooks.Open Filename :=""
+正在激活的 ActiveWork.Sheets(1)
+新建、关闭、保存 ActiveWorkbook.Add/Save/Close
+ActiveWorkbook.SaveAs Filename:=""
+
+
+
+第五课
+cells(2,3).select  c2被选中
+偏移  Range("a1").Offset(2,3).select  D3被选中
+从最后一行向上找直到有数据那行，返回该行行号 Range("a65536").end(xlUp).row
+range("a6").resize(2,3).select  以a6为基准，a6:c7被选中
+选取整行/列  range().EntireRow/EntireColumn
+清空内容  range().clearContents
+复制粘贴   range().copy range()
+合并单元格  range("a1:a2").marge
+调用其他sub   Call abc
+
+
+
+第六课
+筛选  sheet1.range().autoFilter field:=4,criterial:="" 
+筛选之后恢复  sheet1.Cells.autoFilter
+新建表  sheets.add(after:=sheets(sheets.count)).name=""
+消息框  msgBox ""
+输入框,带接收输入  x = InputBox("")
+
+新建表前需要防止表重名：
+Sub sortToSheet()
+Dim i, j, isExist As Integer
+Dim sheetNames As New Collection
+
+Dim intOrder As Integer
+Sheet1.Select
+intOrder = InputBox("你要按第几列过滤筛选后分表")
+
+On Error Resume Next
+For i = 2 To Sheet1.Range("a65536").End(xlUp).Row
+    '获取表名，数据存放在集合型变量sheetNames中，集合型变量加入key以达到去重目的
+    sheetNames.Add Sheet1.Cells(i, intOrder), CStr(Cells(i, intOrder))
+Next
+ 
+sheetNames.Remove ""  '把sheetNames中的空元素去掉
+
+Dim sht As Worksheet
+For i = 1 To sheetNames.Count
+    '判断表是否存在
+    For Each sht In Sheets
+        isExist = 0
+        If sheetNames.Item(i) = sht.Name Then
+            isExist = 1
+            Exit For
+        End If
+    Next
+    '表不存在就建表
+    If isExist = 0 Then
+        Sheets.Add After:=Sheets(Sheets.Count)
+        Sheets(Sheets.Count).Name = sheetNames(i)
+    End If
+Next
+
+Sheet1.Select
+
+End Sub
+
+
+
+
+第七课
+with的用法
+Font对象(Excel)  https://docs.microsoft.com/zh-cn/office/vba/api/excel.font(object)
+With Range('A1:B5').Font
+        .Name = '微软雅黑'                 '字体
+        .ColorIndex = 3                    '字体颜色
+        .Underline = xlUnderlineStyleDouble '下划线
+        .Italic = True                      '是否为斜体
+        .Bold = True                        '是否加粗
+        .Size = 15                          '字号
+End With
+
+全表背景颜色填充变无  Cells.Interior.Pattern=xlNone
+单元格颜色  range("").interior.color=
+被选取的整行颜色改变  Selection.EntireRow.Interior.Color =RGB(255, 0, 255)  
+
+事件
+仅在sheet1里监听事件，在工程管理中双击sheet1，选择事件类型
+停止/开启事件（change事件一定加上）Application.EnableEvents=false/true(一般成对出现)
+在工作簿中监听事件，在工程管理中双击thisWorkbook，选择事件类型
+
+工作表(Worksheet) 对象事件一览表：
+工作表上的事件在默认情况下是可用的。
+Activate--------------------激活工作表时
+Deactivate------------------工作表从活动状态转为非活动状态时
+BeforeDoubleClick-----------双击工作表前
+BeforeRightClick------------右键单击工作表时
+Calculate-------------------对工作表进行重新计算之后
+Change----------------------更改工作表中的单元格，或外部链接引起单元格时
+FollowHyperlink-------------单击工作表上的任意超链接时
+PivotTableUpdate------------在工作簿中的数据透视表更新之后
+SelectionChange-------------工作表上的选定区域发生改变时
+
+工作簿对象事件一览表：
+当工作簿更改、工作簿中的任何工作表更改、加载宏更改或数据透视表更改时，将引发工作簿事件。工作簿上的事件在默认情况下是可用的。
+Activate--------------------激活工作薄时
+AddinInstall----------------当工作簿作为加载宏安装时
+AddinUninstall--------------工作簿作为加载宏卸载时
+BeforeClose-----------------关闭工作薄前
+BeforePrint-----------------打印工作薄(或其中任何内容)之前
+BeforeSave------------------保存工作薄前
+Deactivate------------------工作簿从活动状态转为非活动状态时
+NewSheet--------------------在工作簿中新建工作表时
+Open------------------------打开工作簿时
+PivotTableCloseConnection---在数据透视表关闭与其数据源的连接之后
+PivotTableOpenConnection----在数据透视表打开与其数据源的连接之后
+SheetActivate---------------激活任何一张表时
+SheetBeforeDoubleClick------双击任何工作表时
+SheetBeforeRightClick-------鼠标右键单击任一工作表时
+SheetCalculate--------------工作表重新计算时
+SheetChange-----------------更改工作表中的单元格时
+SheetDeactivate-------------任一工作表由活动状态转为非活动状态时
+SheetFollowHyperlink--------单击 Microsoft Excel 中的任意超链接时
+SheetPivotTableUpdate-------数据透视表的工作表更新之后
+SheetSelectionChange--------工作簿中的数据透视表更新之后
+WindowActivate--------------工作簿的窗口激活时
+WindowDeactivate------------工作簿的窗口变为非活动状态时
+WindowResize----------------工作簿窗口调整大小时
+
+获取当下时间并转换格式 range("a1")=Format(Now(),"yyyy-mm-dd hh:mm")  yyyymmddhhmmss
+备份  activeWorkbook.saveCopyAs="d:\"
+
+
+
+
+第八课
+工作表常用函数：
+WorksheetFunction.
+https://docs.microsoft.com/zh-cn/office/vba/api/excel.worksheetfunction
+计算非空单元格及参数列表中值的个数：CountA(arg1)
+Sheet1.range()=WorksheetFunction.CountA(Sheet2.range("a:a"))-1
+计算区域中满足给定条件的单元格的个数：CountIf(arg1,arg2)
+Sheet1.range()=WorksheetFunction.CountIf(Sheet2.range("f:f"),"男")
+在表格数组的首列查找值，并由此返回表格数组当前行中其他列的值:VLookup(arg1,arg2.arg3)
+Sheet1.range("d14")=WorksheetFunction.VLookup(Sheet1.range("d9"),Sheet2.range("a:f"),5)
+
+常用VBA函数:
+vba.
+Strings----------文本函数
+Math-------------数学函数
+Datetime---------日期时间
+FileSystem-------文本信息
+Financial--------财务函数
+Information------信息函数
+Interaction------交互函数
+
+查找字符函数Application.WorkSheetFunction.Find("要查找的字符","从哪个字符串查找")，返回要查找的字符的索引，索引从1开始，找不到会报错
+vba.Strings.InStr("从哪个字符串查找","要查找的字符"),同上，但找不到不会报错，会返回0
+
+
+截取字符串函数vba.Strings.Split("","")返回一个数组，索引从0开始
+Split("2015-01-09","-")(0)  返回2015
+
+非vba方法截取字符串：=LEFT(J19,4)
+
+
+
+
+第九课
+日期转换函数：
+DateSerial("年","月","日")
+function toDate(str as String)
+    return DateSerial(Left(str,4),Mid(str,5,2),Right(str,2))
+end function
+
+
+
+第十课
+给变量赋值为对象
+dim sht as workSheet
+set sht=Sheets.add
+sht.name=sheet1.range("")
+
+Find()函数：
+返回range对象
+dim rng as Range
+Set rng=Range("d:d").Find(Range("e3"))
+if Not rng Is Nothing then
+    Range("m2")=rng.Offset(0,2)
+end if
+
+dir()函数：
+https://docs.microsoft.com/zh-cn/office/vba/language/reference/user-interface-help/dir-function
+dir()只会获取文件名，不带路径
+range("")=dir("d:\data\苏州.xls*")
+range("")=dir
+使用通配符后第一次dir会把所有文件找出，如：（文件1、文件2、...、空），最后一个是空，赋值只会得到第一个文件，第二次dir不带参数，默认会得到第一次获得的所有文件中的第二个文件，依次类推，但空之后还想赋值会报错
+
+
+
+
+
+
+第十一课
+数组，数组是存放在内存了的，运行速度很快
+定义数组
+dim arr()
+把一个区域赋值为二维数组
+arr=Range("a1:d9")
+Range("h1")=arr(2,5)  ’先行再列
+定义一个固定大小的一维数组
+dim arr(1 to 4)
+'挨个赋值
+arr(1)=""
+arr(2)=""
+dim的变量里不能放变量，先定义不定大小的数组，再重新定义数组大小
+dim arr()
+i=Range("a65536").End(xlUp).row-1
+ReDim arr(1 to i)
+找数组上界(下界LBound)
+debug.print UBound(arr)
+
+计算代码执行了多少秒
+t=Timer
+...
+Timer-t
+Timer是从0点整到当前时间总共过去了多少秒
+
+建议for循环里面的range操作尽量都放在外边赋值给变量
+
+直接跳出多层循环
+GoTo 100
+100写在最外边for的next的下一行
+
+例子：全排列暴力解密。Range操作转为arr速度提升200倍，把所需的数据全丢到数组里，减少计算机指令操作
+
+
+
+
+第十二课
+ActiveX控件
+VBA窗口属性栏
+单选按钮 GroupName
+
+
+
+
+第十三课
+窗体控件
+excel主程序隐藏：Application.visible=False
+excel主程序退出：Application.Quit
+
+下拉框
+下拉框添加选项：ComboBoxl1.AddItem ""
+获取下拉框成员(数组索引从0开始)：ComboBox1.List(0)
+清空下拉框Clear
+下拉框有多少个成员ComboBox1.ListCount
+
+实例：联想输入
+输入框，列表框显示或隐藏
+
+
+
+第十四课
+MsgBos "",arg2
+arg2是显示样式：
+vbOKOnly----------------------0只显示确定按钮
+vbOKCancel--------------------1显示确定及取消按钮
+vbAbortRetryIgnore------------2显示放弃、重试及取消按钮
+vbYesNoCancel-----------------3显示是、否及取消按钮
+vbYesNo-----------------------4显示是、否按钮
+vbRetryCancel-----------------5显示重试、取消按钮
+vbCritical--------------------16危险图标
+vbQuestion--------------------32询问图标
+vbExclamation-----------------48警告图标
+vbInformation-----------------64信息图标
+
+MsgBos()返回值：
+vbOK-------------1确定
+vbCancel---------2取消
+vbAbort----------3终止
+vbRetry----------4重试
+vbIgnore---------5忽略
+vbYes------------6是
+vbNo-------------7否
+
+获取MsgBox返回值
+dim ret as Integer
+ret=MsgBox("",3+48)
+
+可限制输入类型的InputBox：
+Application.InputBox("",,,,,,,1)
+最后的可选参数类型说明：
+0----------------公式
+1----------------数字
+2----------------文本、字符串
+4----------------True/False
+8----------------单元格引用，Range对象
+16---------------错误值，如#N/A
+64---------------数值数组
+
+系统选取文件对话框：
+Application.GetOpenFilename(文件类型，优先类型，对话框标题，按钮文字，是否支持多选)
+str=Application.GetOpenFilename("新表,*.xlsx,老表,*xls",1,"","",False)
+返回string类型，所选取文件的完整路径，没有选择文件返回字符串False
+支持多文件选取返回的则是数组，索引从1开始
+
+
+
+
+
+
+第十五课
+使用ADO，可以不打开文件就直接写入数据
+在VBA界面，工具-引用
+勾选Microsoft ActiveX Data Objects x.x Library
+
+excel连接外部excel表，HDR表示是否有表头
+dim conn as new ADODB.Connection
+conn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=D:\data\text.xlsx;extended properties""excel 12.0;HDR=yes"""
+Range("a2").CopyFormRecordset conn.Execute("SQL语句")
+coon.Close
+
+excel连接外部数据库
+conn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=D:\data\text.accdb"
+
+将查询结果赋值到数组
+arr=Application.WorksheetFunction.Transpose(conn.Execute("SQL语句").GetRows)
+
+vba语言里想输出双引号，在双引号里连续写两个双引号，"隔壁""老王""！"
+excel连接的是外部excel表，具体某个文件下的表SQL语句需带$，select 姓名，年龄 from [data$]  
+
+常用SQL语句：
+查询数据
+select * from [data$]
+
+查询某几个字段
+select 姓名，年龄 from [data$]  
+
+带条件的查询
+select 姓名，年龄 from [data$] where 性别=`男`
+
+完全连接，合并两个表的数据
+select * from [data$]  union all select * from [data2$]  
+
+插入新记录
+insert into [data$] (姓名，性别,年龄) values (`狼王`,`男`,22)
+
+删除整条数据，删除语句只能是当数据库时才能执行
+delete from [data$] where 性别=`男`
+
+更新某条数据
+update [data$] set 年龄=25,性别=`男` where 姓名=`张三`
+
+左完全连接（类似VLOOKUP）,left的意思是以先说到的那张表为主,right则反之,两表先完全连接符合条件的项，再select，数据库知识
+select [data$].姓名,年龄,月薪 from [data$] left join [data3$] on [data$].姓名=[data3$].姓名
+
+先union，再left join
+select a.姓名,年龄,月薪 from (select * from [data$] union all select * from [data2$])a left join [data3$] on a.姓名=[data3$].姓名
+
+
+
+
+第十六课
+Shape对象包括，图形、图片、表单控件、矩形框...
+
+for each shp in Sheet1.Shapes
+
+shape的Name、Type属性
+
+返回所处单元格地址：$B$15
+shp.TopLeftCell.Address
+
+在表中添加图片
+Sheet1.Shapes.AddPicture "D:\data\xx.jpg",moFalse,mosTrue,Range("b2").Left,Range("b2").Top,Range("b2").width,Range("b2").Height
+
+文件重命名
+Name "d:\data\xx.jpg" As "d:\data\xx123 .jpg"
+
+插入折线图
+Dim shp As Shape
+Set shp=Sheet1.Shapes.AddChart
+    shp.Chart.SetSourceData Range("a2:c10")
+    shp.Chart.ChartType=xlLine
+
+表单控件（非ActiveX）单选按钮互斥需点击分组按钮进行分组
+
+模糊查询like、通配符*
+For Each shp In Shapes
+    If shp.Name like "Group Box*" Then
+       shp.Visible=msoFalse
+    End If
+Next
+
+For Each shp In Shapes
+    If shp.FormControlType=xlGroupBox Then
+       shp.Visible=msoFalse
+    End If
+Next
+
+Like "J*"-----------------*  匹配n个字符
+Like "J??a??"-------------?  匹配某一字符
+Like "[A-J a-m]*"---------[] 匹配在哪些范围内的某一字符
+Like "##*"----------------#  匹配某一数字字符
+Like "[0-9][!0-5]*"-------!  表否定
+
+
+
+
+
+第十七课
+类模块，是自己手动建立新对象，把公共代码整理成类模块，便于以后通过该对象调用公共代码
+类模块重点，起名字，方法，只读属性，可写入属性
+
+
+
+
+第十八课
+字典,数据类型
+
+dim dic as New Dictionary
+工具-引用－Microsoft Script Runningtime
+scrrun.dll
+
+dim dic
+set dic=CreateObject("Scripting.Dictionary ")
+
+Dictionary.add(key,item),key遇到重名的会报错
+
+不推荐用add添加成员
+arr=Range("d2:e5")
+for i=1 to 4
+    dic(arr(i,1))=arr(i,2)
+next
+
+例子：小店销售小工具
+三级联动
+用户窗体、列表框
+    Dim dic As New dictionary
+    Dim i, j
+    For i = LBound(arr) To UBound(arr)
+        dic(arr(i, 3)) = arr(i, 3)
+    Next
+    ListBox1.List = dic.Keys
+
+
+
+第十九课
+excel+access
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
